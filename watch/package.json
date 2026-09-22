@@ -1,0 +1,16 @@
+{
+  "name": "gymlog-watch",
+  "version": "0.1.0",
+  "description": "Body weight logger for Amazfit GTR 4 (Zepp OS) syncing over BLE to gymsync",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@zeppos/zeus-cli": "^1.0.0"
+  },
+  "scripts": {
+    "build": "zeus build && python3 scripts/fix_zab.py"
+  },
+  "_moduleAliases": {
+    "zeppos-app-utils": "node_modules/@zeppos/zeus-cli/private-modules/zeppos-app-utils"
+  }
+}

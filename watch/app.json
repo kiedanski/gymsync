@@ -1,0 +1,51 @@
+{
+  "configVersion": "v2",
+  "app": {
+    "appId": 20260921,
+    "appName": "GymLog",
+    "appType": "app",
+    "version": {
+      "code": 1,
+      "name": "0.1.0"
+    },
+    "icon": "icon.png",
+    "vender": "diego",
+    "description": "Body weight logger, syncs over BLE to gymsync"
+  },
+  "permissions": [
+    "device:os.local_storage"
+  ],
+  "runtime": {
+    "apiVersion": {
+      "compatible": "3.0.0",
+      "target": "3.0.0",
+      "minVersion": "3.0"
+    }
+  },
+  "debug": false,
+  "defaultLanguage": "en-US",
+  "i18n": {
+    "en-US": {
+      "appName": "GymLog"
+    }
+  },
+  "targets": {
+    "gtr4": {
+      "module": {
+        "page": {
+          "pages": [
+            "page/home",
+            "page/sync"
+          ]
+        }
+      },
+      "platforms": [
+        { "name": "gtr4", "deviceSource": 7930113 },
+        { "name": "gtr4", "deviceSource": 7864577 },
+        { "name": "gtr4-cn", "deviceSource": 7930112 }
+      ],
+      "designWidth": 480,
+      "screenShape": "round"
+    }
+  }
+}

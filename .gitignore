@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+*.db
+*.db-journal
+.DS_Store
+config.yaml
+
+# tooling / session state — never publish
+.omc/
+.claude/

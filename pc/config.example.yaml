@@ -1,0 +1,27 @@
+# gymsync daemon configuration. Copy to config.yaml and adjust.
+
+# Local name advertised over BLE (the watch filters on this).
+name: gymsync
+
+# hci index of the adapter to power-cycle on repeated failures (Linux only).
+adapter_index: 0
+
+db_path: gymsync.db
+
+# Chunk payload bytes for notifications, also reported to the watch via INFO.
+# 16 = safe at un-negotiated MTU 23. Raise only after testing on hardware.
+max_payload: 16
+
+# Accept any device (v0). For the spec's allowlist, set false and list ids —
+# the watch shows its generated id in hello logs on first sync.
+allow_all_devices: true
+allowed_devices: []
+#  - gtr4-1a2b3c4d
+
+# Recycle the advertisement after this much post-activity silence.
+idle_timeout_s: 60
+reassembly_timeout_s: 10
+
+# After 3 consecutive server failures, run `btmgmt power off/on` (needs
+# permissions; Linux only). Leave false on macOS.
+power_cycle: false
