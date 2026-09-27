@@ -2,7 +2,7 @@
   "configVersion": "v2",
   "app": {
     "appId": 20260921,
-    "appName": "GymLog",
+    "appName": "WeightLog",
     "appType": "app",
     "version": {
       "code": 1,
@@ -10,7 +10,7 @@
     },
     "icon": "icon.png",
     "vender": "diego",
-    "description": "Body weight logger, syncs over BLE to gymsync"
+    "description": "Body weight logger, syncs over BLE to weightlog"
   },
   "permissions": [
     "device:os.local_storage"
@@ -26,7 +26,7 @@
   "defaultLanguage": "en-US",
   "i18n": {
     "en-US": {
-      "appName": "GymLog"
+      "appName": "WeightLog"
     }
   },
   "targets": {
@@ -35,7 +35,8 @@
         "page": {
           "pages": [
             "page/home",
-            "page/sync"
+            "page/sync",
+            "page/history"
           ]
         }
       },

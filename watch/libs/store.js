@@ -2,12 +2,14 @@
 // v0 keeps the queue in localStorage (few items/day for body weight).
 // Swap to a queue.jsonl on @zos/fs when sets/sessions land (spec §Almacenamiento).
 import { localStorage } from '@zos/storage'
+import { HISTORY_MAX } from './config'
 
 const KEY_QUEUE = 'queue'
 const KEY_LAST_KG = 'last_kg'
 const KEY_DEVICE_ID = 'device_id'
 const KEY_LAST_SYNC = 'last_sync_ts'
 const KEY_SEQ = 'id_seq'
+const KEY_HISTORY = 'history'
 
 function readJSON(key, fallback) {
   try {
@@ -56,7 +58,22 @@ export function pushWeight(kg) {
   queue.push(item)
   writeJSON(KEY_QUEUE, queue)
   writeJSON(KEY_LAST_KG, item.k)
+  appendHistory(item)
   return item
+}
+
+// Reading log kept separately from the sync queue: queue entries are dropped
+// as soon as the PC acks them, so history() is the only thing left to show.
+function appendHistory(item) {
+  const log = readJSON(KEY_HISTORY, [])
+  log.push({ k: item.k, t: item.t })
+  while (log.length > HISTORY_MAX) log.shift()
+  writeJSON(KEY_HISTORY, log)
+}
+
+// Oldest first.
+export function history() {
+  return readJSON(KEY_HISTORY, [])
 }
 
 export function pendingItems() {

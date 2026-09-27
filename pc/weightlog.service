@@ -1,12 +1,12 @@
 [Unit]
-Description=gymsync BLE sync daemon (GymLog watch)
+Description=weightlog BLE sync daemon (WeightLog watch)
 After=bluetooth.service
 Requires=bluetooth.service
 
 [Service]
 Type=simple
 # Adjust paths: venv + config location on the target box.
-ExecStart=/opt/gymsync/.venv/bin/gymsync --config /etc/gymsync/config.yaml
+ExecStart=/opt/weightlog/.venv/bin/weightlog --config /etc/weightlog/config.yaml
 Restart=always
 RestartSec=3
 

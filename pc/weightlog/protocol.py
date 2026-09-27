@@ -10,7 +10,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-log = logging.getLogger("gymsync.protocol")
+log = logging.getLogger("weightlog.protocol")
 
 PROTO_VERSION = 1
 

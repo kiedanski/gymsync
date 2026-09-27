@@ -5,8 +5,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from gymsync.protocol import PROTO_VERSION, Reassembler, SyncSession, encode_chunks, info_payload
-from gymsync.store import Store
+from weightlog.protocol import PROTO_VERSION, Reassembler, SyncSession, encode_chunks, info_payload
+from weightlog.store import Store
 
 NOW = 1_758_600_000  # 2026-09-23-ish
 

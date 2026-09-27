@@ -1,5 +1,5 @@
 // BLE sync client: scan -> connect -> profile -> hello -> batches -> bye.
-// The watch is BLE Central (libs/ble.js over raw @zos/ble); gymsync on the
+// The watch is BLE Central (libs/ble.js over raw @zos/ble); weightlog on the
 // PC is the GATT peripheral and the source of truth.
 // Every step is wrapped so failures surface on screen instead of freezing.
 import { setTimeout, clearTimeout } from '@zos/timer'
@@ -14,6 +14,7 @@ import {
   CHUNK_PAYLOAD,
   SCAN_TIMEOUT_MS,
   CONNECT_TIMEOUT_MS,
+  PREPARE_TIMEOUT_MS,
   ACK_TIMEOUT_MS,
   ACK_RETRIES,
   BATCH_SIZE,
@@ -30,7 +31,12 @@ export function createSyncClient(onState) {
   let msgId = 1 + Math.floor(Math.random() * 30000)
   let scanTimer = null
   let connectTimer = null
+  let prepareTimer = null
   let ackTimer = null
+  // ble.close() calls mstOffAllCb(), which drops BLE callbacks process-wide —
+  // not just this client's. So the delayed close after a finished sync must be
+  // cancellable, or it will silently unhook whichever client started next.
+  let closeTimer = null
   let retries = 0
   let finished = false
   let batchSeq = 0
@@ -51,17 +57,28 @@ export function createSyncClient(onState) {
   function clearTimers() {
     if (scanTimer) clearTimeout(scanTimer)
     if (connectTimer) clearTimeout(connectTimer)
+    if (prepareTimer) clearTimeout(prepareTimer)
     if (ackTimer) clearTimeout(ackTimer)
-    scanTimer = connectTimer = ackTimer = null
+    scanTimer = connectTimer = prepareTimer = ackTimer = null
+  }
+
+  // Tear down now instead of on the delayed timer, so no stale close() can
+  // unhook a client that started after this one.
+  function closeNow() {
+    if (closeTimer) {
+      clearTimeout(closeTimer)
+      closeTimer = null
+    }
+    try {
+      ble.close()
+    } catch (e) {}
   }
 
   function fail(reason) {
     if (finished) return
     finished = true
     clearTimers()
-    try {
-      ble.close()
-    } catch (e) {}
+    closeNow()
     state('error', reason)
   }
 
@@ -84,7 +101,9 @@ export function createSyncClient(onState) {
     try {
       sendMsg({ m: 'bye' })
     } catch (e) {}
-    setTimeout(() => {
+    // Give 'bye' time to flush before tearing the link down.
+    closeTimer = setTimeout(() => {
+      closeTimer = null
       try {
         ble.close()
       } catch (e) {}
@@ -171,11 +190,19 @@ export function createSyncClient(onState) {
     services[SVC_UUID][RX_UUID] = []
     services[SVC_UUID][TX_UUID] = ['2902']
     services[SVC_UUID][INFO_UUID] = []
+    prepareTimer = setTimeout(
+      guard(() => fail('perfil GATT: sin respuesta')),
+      PREPARE_TIMEOUT_MS
+    )
     ble.buildProfile(
       mac,
       name,
       services,
       guard((ok, msg) => {
+        if (prepareTimer) {
+          clearTimeout(prepareTimer)
+          prepareTimer = null
+        }
         if (!ok) {
           fail('perfil GATT: ' + msg)
           return
@@ -270,7 +297,11 @@ export function createSyncClient(onState) {
     }
   }
 
+  // Always releases the radio, even when the sync already finished — the
+  // pending close from done() would otherwise fire later and unhook the next
+  // client (mstOffAllCb is process-wide).
   function cancel() {
+    closeNow()
     fail('cancelado')
   }
 

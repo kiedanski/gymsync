@@ -1,4 +1,4 @@
-# gymsync — GTR 4 → BLE → PC
+# weightlog — GTR 4 → BLE → PC
 
 Body-weight logger (v0 of the gym logger spec): a Zepp OS mini-app on the
 Amazfit GTR 4 queues weigh-ins offline and syncs them over BLE to a Linux
@@ -7,7 +7,7 @@ phone in the loop — the watch is BLE Central, the PC is a GATT peripheral.
 
 ```
 watch/   Zepp OS device app (Zeus CLI project), sideloaded via Gadgetbridge
-pc/      gymsync daemon: Python + bless (BlueZ on Linux, CoreBluetooth on macOS)
+pc/      weightlog daemon: Python + bless (BlueZ on Linux, CoreBluetooth on macOS)
 ```
 
 v0 scope is deliberately the thinnest full vertical slice: one data type
@@ -33,8 +33,14 @@ Install the `.zab` on the GTR 4 through Gadgetbridge (File Installer → open th
 (API_LEVEL ≥ 3.0 — the BLE master APIs need it; current GTR 4 firmware is 3.5).
 
 Screens:
-- **Home**: weight value, −1 / −.1 / +.1 / +1, GUARDAR (vibrates, queues item),
-  pending count, SYNC.
+- **Home**: large weight readout with −0.1 / +0.1 steppers (drag the readout
+  itself for long jumps), SAVE (vibrates, queues the item, then starts a sync
+  on its own), SYNC, a pending-count badge, and a tappable `last … kg ›` line
+  into History.
+- **History**: recent readings newest first, six per page, each with its delta
+  against the previous one. Backed by a local log in `libs/store.js` that
+  survives sync (the pending queue is emptied on ack, so it cannot be the
+  source); the PC keeps the full archive.
 - **Sync**: status (buscando / conectando / enviando n de m / listo / error),
   REINTENTAR, VOLVER. Screen stays on for 2 min.
 
@@ -44,12 +50,12 @@ Screens:
 cd pc
 python3 -m venv .venv && .venv/bin/pip install -e .
 cp config.example.yaml config.yaml
-.venv/bin/gymsync --config config.yaml -v
+.venv/bin/weightlog --config config.yaml -v
 ```
 
 Works on macOS too (bless uses CoreBluetooth) — handy for first end-to-end
 tests before deploying to the Linux box. For Linux deployment there's a
-systemd unit in `pc/gymsync.service` (adjust paths).
+systemd unit in `pc/weightlog.service` (adjust paths).
 
 Linux prerequisites:
 - BlueZ ≥ 5.48 (any current distro; no `--experimental` needed).
@@ -95,7 +101,7 @@ in this order and expect to tweak:
    documented — if nothing matches, log the raw device objects in
    `watch/libs/sync.js` (`found` callback) and adjust the name/field matching.
 2. **Write path**: one weigh-in, one sync. Watch shows "Listo", PC log shows
-   the batch, `sqlite3 gymsync.db 'select * from body_weights;'` shows the row.
+   the batch, `sqlite3 weightlog.db 'select * from body_weights;'` shows the row.
 3. **Ack path**: pending count on Home drops to zero (TX notifications work).
 4. **Retry/dedupe**: sync the same queue twice (kill the daemon mid-sync once);
    no duplicate rows.
@@ -112,7 +118,7 @@ in this order and expect to tweak:
   `@zos/fs` when sets/sessions arrive, per the spec.
 - `allow_all_devices: true` by default; flip to the allowlist after the first
   sync (device id appears in the daemon log).
-- Advertising name fits the 31-byte legacy ADV packet only because `gymsync`
+- Advertising name fits the 31-byte legacy ADV packet only because `weightlog`
   is short; bless puts the name in scan response on most backends anyway.
 - Next per spec: exercises catalog + sets + sessions (needs the per-type
   upsert semantics: sessions upsert `ended_at`, sets tombstone on undo),

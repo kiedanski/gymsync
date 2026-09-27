@@ -1,12 +1,12 @@
-# gymsync daemon configuration. Copy to config.yaml and adjust.
+# weightlog daemon configuration. Copy to config.yaml and adjust.
 
 # Local name advertised over BLE (the watch filters on this).
-name: gymsync
+name: weightlog
 
 # hci index of the adapter to power-cycle on repeated failures (Linux only).
 adapter_index: 0
 
-db_path: gymsync.db
+db_path: weightlog.db
 
 # Chunk payload bytes for notifications, also reported to the watch via INFO.
 # 16 = safe at un-negotiated MTU 23. Raise only after testing on hardware.
@@ -25,3 +25,12 @@ reassembly_timeout_s: 10
 # After 3 consecutive server failures, run `btmgmt power off/on` (needs
 # permissions; Linux only). Leave false on macOS.
 power_cycle: false
+
+# Push the database to tilde after any sync that accepted new readings.
+# tilde's health watcher picks the file up from the inbox and regenerates
+# health/weight/YYYYMM.csv itself — same route Gadgetbridge takes. Leave
+# tilde_url unset to disable. The app password is minted on the tilde host:
+#   tilde auth app-password create --name pi3 --scope '/dav/*'
+# tilde_url: https://tilde.example/dav/files/health/_inbox/weightlog.db
+# tilde_user: weightlog          # any username; the app password carries the scope
+# tilde_app_password: tilde_app_...

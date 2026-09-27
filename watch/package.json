@@ -1,7 +1,7 @@
 {
-  "name": "gymlog-watch",
+  "name": "weightlog-watch",
   "version": "0.1.0",
-  "description": "Body weight logger for Amazfit GTR 4 (Zepp OS) syncing over BLE to gymsync",
+  "description": "Body weight logger for Amazfit GTR 4 (Zepp OS) syncing over BLE to weightlog",
   "type": "module",
   "private": true,
   "devDependencies": {

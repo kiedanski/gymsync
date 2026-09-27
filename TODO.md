@@ -1,17 +1,17 @@
-# gymsync — next steps
+# weightlog — next steps
 
 Ordered by dependency; each phase gates the next. Items marked 🖐 need you +
 the watch; the rest can be done from a keyboard.
 
 ## Phase 0 — prove it on hardware (one evening)
 
-- [ ] Run the daemon on the Mac: `cd pc && .venv/bin/gymsync --config config.example.yaml -v`
+- [ ] Run the daemon on the Mac: `cd pc && .venv/bin/weightlog --config config.example.yaml -v`
 - [ ] 🖐 Sideload `watch/dist/*.zab` on the GTR 4 via Gadgetbridge (File Installer)
 - [ ] 🖐 Save a weight on the watch, hit SYNC → watch reaches "Listo"
   - If stuck on "Buscando PC": log the raw device objects in the `found`
     callback in `watch/libs/sync.js` and fix the name/field matching —
     easy-ble's scan-result shape is the least-documented piece
-- [ ] Row visible: `sqlite3 pc/gymsync.db 'select * from body_weights;'` and
+- [ ] Row visible: `sqlite3 pc/weightlog.db 'select * from body_weights;'` and
   pending count on Home drops to 0 (proves TX notifications/acks work)
 - [ ] Dedupe under failure: kill the daemon mid-sync, restart, re-sync → still
   exactly one row per weigh-in
@@ -27,10 +27,10 @@ the watch; the rest can be done from a keyboard.
   `sudo btmgmt info` → "supported settings" must include `le` + `advertising`
 - [ ] If the box's BT is busy or unsupported: dedicated CSR 4.0-clone USB dongle
 - [ ] Deploy: clone repo, venv, `config.yaml` (set `adapter_index`,
-  `power_cycle: true`), install `pc/gymsync.service`, enable + start
+  `power_cycle: true`), install `pc/weightlog.service`, enable + start
 - [ ] After first sync: copy the device id from the daemon log into
   `allowed_devices`, set `allow_all_devices: false`
-- [ ] 🖐 Weigh in daily for 1–2 weeks; watch `journalctl -u gymsync` for
+- [ ] 🖐 Weigh in daily for 1–2 weeks; watch `journalctl -u weightlog` for
   advertising-restart failures (the BlueZ #644 mitigation earning its keep)
 - [ ] Commit the scaffold + any hardware fixes to git
 

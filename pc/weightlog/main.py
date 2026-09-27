@@ -7,23 +7,28 @@ import sys
 
 import yaml
 
-from .server import GymSyncServer
+from .server import WeightLogServer
 
 DEFAULTS = {
-    "name": "gymsync",
+    "name": "weightlog",
     "adapter_index": 0,
-    "db_path": "gymsync.db",
+    "db_path": "weightlog.db",
     "max_payload": 16,
     "allow_all_devices": True,
     "allowed_devices": [],
     "idle_timeout_s": 60,
     "reassembly_timeout_s": 10,
     "power_cycle": False,
+    # Push to tilde after a sync that accepted anything. Disabled until a URL
+    # and app password are configured.
+    "tilde_url": None,
+    "tilde_user": "weightlog",
+    "tilde_app_password": None,
 }
 
 
 def cli() -> None:
-    parser = argparse.ArgumentParser(prog="gymsync", description="BLE sync daemon for the GymLog watch app")
+    parser = argparse.ArgumentParser(prog="weightlog", description="BLE sync daemon for the WeightLog watch app")
     parser.add_argument("--config", help="path to YAML config", default=None)
     parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args()
@@ -40,7 +45,7 @@ def cli() -> None:
     )
 
     try:
-        asyncio.run(GymSyncServer(config).run())
+        asyncio.run(WeightLogServer(config).run())
     except KeyboardInterrupt:
         pass
 

@@ -64,7 +64,7 @@ export function createBle() {
     const profile = {
       pair: true,
       id: connectId,
-      profile: devName || 'gymsync',
+      profile: devName || 'weightlog',
       dev: mac2ab(mac),
       len: 1,
       list: [{ uuid: true, size: svcEntries.length, len: svcEntries.length, list: [] }],

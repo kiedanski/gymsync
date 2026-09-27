@@ -8,7 +8,7 @@ import logging
 import re
 import sqlite3
 
-log = logging.getLogger("gymsync.store")
+log = logging.getLogger("weightlog.store")
 
 KG_MIN, KG_MAX = 30.0, 250.0
 TS_MIN = 1577836800  # 2020-01-01

@@ -1,4 +1,4 @@
-// Wire framing shared with the gymsync daemon (see pc/gymsync/protocol.py).
+// Wire framing shared with the weightlog daemon (see pc/weightlog/protocol.py).
 // Chunk = 4-byte header (msg_id LE16, index u8, total u8) + payload.
 // One message = one UTF-8 JSON document, max 255 chunks.
 

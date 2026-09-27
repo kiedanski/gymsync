@@ -1,5 +1,5 @@
 [project]
-name = "gymsync"
+name = "weightlog"
 version = "0.1.0"
 description = "BLE GATT peripheral daemon receiving gym data from an Amazfit GTR 4"
 requires-python = ">=3.10"
@@ -9,11 +9,11 @@ dependencies = [
 ]
 
 [project.scripts]
-gymsync = "gymsync.main:cli"
+weightlog = "weightlog.main:cli"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["gymsync"]
+packages = ["weightlog"]

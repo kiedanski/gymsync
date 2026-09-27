@@ -34,11 +34,12 @@ from .protocol import (
     info_payload,
 )
 from .store import Store
+from . import tilde
 
-log = logging.getLogger("gymsync.server")
+log = logging.getLogger("weightlog.server")
 
 
-class GymSyncServer:
+class WeightLogServer:
     def __init__(self, config: dict):
         self.cfg = config
         self.store = Store(config["db_path"])
@@ -62,7 +63,7 @@ class GymSyncServer:
     async def _serve_once(self) -> None:
         loop = asyncio.get_running_loop()
         rx_queue: asyncio.Queue[bytes] = asyncio.Queue()
-        server = BlessServer(name=self.cfg.get("name", "gymsync"), loop=loop)
+        server = BlessServer(name=self.cfg.get("name", "weightlog"), loop=loop)
 
         def on_write(characteristic, value, **kwargs):
             if str(characteristic.uuid).lower() == RX_UUID:
@@ -98,9 +99,9 @@ class GymSyncServer:
         )
 
         await server.start()
-        log.info("advertising as %r, service %s", self.cfg.get("name", "gymsync"), SVC_UUID)
+        log.info("advertising as %r, service %s", self.cfg.get("name", "weightlog"), SVC_UUID)
         try:
-            await self._session_loop(server, rx_queue)
+            session = await self._session_loop(server, rx_queue)
         finally:
             try:
                 await server.stop()
@@ -108,7 +109,13 @@ class GymSyncServer:
                 log.warning("server.stop() failed", exc_info=True)
             log.info("server cycle ended, rebuilding advertisement")
 
-    async def _session_loop(self, server: BlessServer, rx_queue: asyncio.Queue) -> None:
+        # Push only after the radio is down: on a Pi 3 the one antenna is
+        # shared between BLE and Wi-Fi, so uploading while advertising would
+        # have them fight. Only when something new actually landed.
+        if session is not None and session.stats["accepted"]:
+            await asyncio.to_thread(tilde.upload, self.cfg["db_path"], self.cfg)
+
+    async def _session_loop(self, server: BlessServer, rx_queue: asyncio.Queue) -> SyncSession:
         reassembler = Reassembler(self.cfg.get("reassembly_timeout_s", 10))
         session = SyncSession(
             self.store,
@@ -126,14 +133,14 @@ class GymSyncServer:
             except asyncio.TimeoutError:
                 log.warning("connection went silent for %ds, recycling", idle_timeout)
                 session._finish(time.time())
-                return
+                return session
             now = time.time()
             last_activity = now
             for msg in reassembler.feed(chunk, now):
                 for reply in session.handle(msg, now):
                     msg_id = await self._notify(server, reply, msg_id)
             if session.done:
-                return
+                return session
 
     async def _notify(self, server: BlessServer, reply: dict, msg_id: int) -> int:
         """Send one message as paced notify chunks.
