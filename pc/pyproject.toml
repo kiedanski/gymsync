@@ -10,6 +10,7 @@ dependencies = [
 
 [project.scripts]
 weightlog = "weightlog.main:cli"
+weightlog-memos = "weightlog.memoproc:main"
 
 [build-system]
 requires = ["setuptools>=68"]

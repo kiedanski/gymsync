@@ -33,6 +33,7 @@ from .protocol import (
     encode_chunks,
     info_payload,
 )
+from .memo import MemoAssembler
 from .store import Store
 from . import tilde
 
@@ -43,6 +44,8 @@ class WeightLogServer:
     def __init__(self, config: dict):
         self.cfg = config
         self.store = Store(config["db_path"])
+        memo_dir = config.get("memo_dir")
+        self.assembler = MemoAssembler(memo_dir) if memo_dir else None
         self.failures = 0
 
     async def run(self) -> None:
@@ -121,6 +124,7 @@ class WeightLogServer:
             self.store,
             allowed_devices=self.cfg.get("allowed_devices", []),
             allow_all=self.cfg.get("allow_all_devices", False),
+            assembler=self.assembler,
         )
         idle_timeout = self.cfg.get("idle_timeout_s", 60)
         msg_id = 1

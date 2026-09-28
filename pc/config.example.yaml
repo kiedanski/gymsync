@@ -26,6 +26,28 @@ reassembly_timeout_s: 10
 # permissions; Linux only). Leave false on macOS.
 power_cycle: false
 
+# Where received voice memos are written. Unset disables memo transfer, and
+# the daemon then refuses `memo` messages rather than half-accepting them.
+# Files land as <ts>-<id>.opus in the Zepp recorder's own framed container —
+# not Ogg-Opus, so they need repacking before playback.
+# memo_dir: /var/lib/weightlog/memos
+#
+# Voice memo post-processing (the weightlog-memos service): audio is uploaded
+# under memo_dav_dir in tilde's files tree, transcribed with whisper.cpp, and
+# appended to memo_note. That note must be a file nothing else writes to —
+# appending into one the user also edits is an unmergeable write race with
+# their sync client.
+# tilde_dav_base: https://tilde.example/dav/files
+# tilde_mcp_url: https://tilde.example/mcp
+# tilde_mcp_token: mcp_prod_...
+# memo_dav_dir: memos
+# memo_note: notes/memos.md
+# whisper_bin: /home/pi/whisper.cpp/build/bin/whisper-cli
+# whisper_model: /home/pi/whisper.cpp/models/ggml-base.bin
+# whisper_lang: es
+# whisper_threads: 3
+# memo_poll_s: 60
+
 # Push the database to tilde after any sync that accepted new readings.
 # tilde's health watcher picks the file up from the inbox and regenerates
 # health/weight/YYYYMM.csv itself — same route Gadgetbridge takes. Leave

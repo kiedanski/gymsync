@@ -19,6 +19,8 @@ DEFAULTS = {
     "idle_timeout_s": 60,
     "reassembly_timeout_s": 10,
     "power_cycle": False,
+    # Directory for received voice memos. None disables memo transfer.
+    "memo_dir": None,
     # Push to tilde after a sync that accepted anything. Disabled until a URL
     # and app password are configured.
     "tilde_url": None,

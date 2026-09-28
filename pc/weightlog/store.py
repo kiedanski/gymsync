@@ -23,6 +23,27 @@ CREATE TABLE IF NOT EXISTS body_weights (
     received_at INTEGER NOT NULL,
     clock_offset_s INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS voice_memos (
+    id TEXT PRIMARY KEY,
+    device_id TEXT NOT NULL,
+    ts INTEGER NOT NULL,
+    secs INTEGER NOT NULL,
+    bytes INTEGER NOT NULL,
+    path TEXT NOT NULL,
+    received_at INTEGER NOT NULL
+);
+-- Post-processing progress, one row per memo. Each step is recorded on its own
+-- so a failure in any of them can be retried without repeating the others.
+CREATE TABLE IF NOT EXISTS memo_processing (
+    id TEXT PRIMARY KEY,
+    ogg_path TEXT,
+    remote_path TEXT,
+    uploaded_at INTEGER,
+    transcript TEXT,
+    transcribed_at INTEGER,
+    appended_at INTEGER,
+    error TEXT
+);
 CREATE TABLE IF NOT EXISTS sync_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     device_id TEXT NOT NULL,
@@ -105,6 +126,75 @@ class Store:
                 " VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (device_id, started_at, ended_at, accepted, duplicated, rejected, error),
             )
+
+    def memo_exists(self, memo_id: str) -> bool:
+        row = self.conn.execute(
+            "SELECT 1 FROM voice_memos WHERE id = ?", (memo_id,)
+        ).fetchone()
+        return row is not None
+
+    def insert_memo(
+        self,
+        memo_id: str,
+        device_id: str,
+        ts: int,
+        secs: int,
+        byte_len: int,
+        path: str,
+        now: int,
+    ) -> bool:
+        """Record a stored memo. False if the id was already known."""
+        with self.conn:
+            cur = self.conn.execute(
+                "INSERT OR IGNORE INTO voice_memos (id, device_id, ts, secs, bytes, path, received_at)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (memo_id, device_id, ts, secs, byte_len, path, now),
+            )
+        return bool(cur.rowcount)
+
+    # ── memo post-processing ─────────────────────────────────────────────────
+    def memos_needing_work(self) -> list[tuple]:
+        """(id, ts, secs, path) for memos not yet uploaded, transcribed and filed."""
+        return self.conn.execute(
+            "SELECT m.id, m.ts, m.secs, m.path FROM voice_memos m"
+            " LEFT JOIN memo_processing p ON p.id = m.id"
+            " WHERE p.id IS NULL OR p.uploaded_at IS NULL OR p.appended_at IS NULL"
+            " ORDER BY m.ts"
+        ).fetchall()
+
+    def memo_state(self, memo_id: str) -> dict:
+        row = self.conn.execute(
+            "SELECT ogg_path, remote_path, uploaded_at, transcript, transcribed_at, appended_at, error"
+            " FROM memo_processing WHERE id = ?",
+            (memo_id,),
+        ).fetchone()
+        if row is None:
+            return {}
+        keys = ("ogg_path", "remote_path", "uploaded_at", "transcript", "transcribed_at", "appended_at", "error")
+        return dict(zip(keys, row))
+
+    def _upsert_memo_processing(self, memo_id: str, **fields) -> None:
+        assignments = ", ".join(f"{k} = ?" for k in fields)
+        with self.conn:
+            self.conn.execute("INSERT OR IGNORE INTO memo_processing (id) VALUES (?)", (memo_id,))
+            self.conn.execute(
+                f"UPDATE memo_processing SET {assignments} WHERE id = ?",
+                (*fields.values(), memo_id),
+            )
+
+    def mark_memo_uploaded(self, memo_id: str, ogg_path: str, remote_path: str, when: int) -> None:
+        self._upsert_memo_processing(
+            memo_id, ogg_path=ogg_path, remote_path=remote_path, uploaded_at=when, error=None
+        )
+
+    def mark_memo_transcribed(self, memo_id: str, transcript: str, when: int) -> None:
+        self._upsert_memo_processing(memo_id, transcript=transcript, transcribed_at=when, error=None)
+
+    def mark_memo_appended(self, memo_id: str, when: int) -> None:
+        self._upsert_memo_processing(memo_id, appended_at=when, error=None)
+
+    def mark_memo_error(self, memo_id: str, message: str) -> None:
+        self._upsert_memo_processing(memo_id, error=message)
 
     def weights(self, limit: int = 50) -> list[tuple]:
         return self.conn.execute(

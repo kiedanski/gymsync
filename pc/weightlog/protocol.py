@@ -10,6 +10,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from .memo import MAX_MEMO_BYTES, MAX_PARTS, MemoAssembler
+
 log = logging.getLogger("weightlog.protocol")
 
 PROTO_VERSION = 1
@@ -87,14 +89,22 @@ class SyncSession:
     Feed complete messages in; get reply messages (to notify back) out.
     """
 
-    def __init__(self, store, allowed_devices: list[str], allow_all: bool):
+    def __init__(
+        self,
+        store,
+        allowed_devices: list[str],
+        allow_all: bool,
+        assembler: "MemoAssembler | None" = None,
+    ):
         self.store = store
         self.allowed = set(allowed_devices)
         self.allow_all = allow_all
+        self.assembler = assembler
+        self.memo_meta: dict[str, dict] = {}
         self.device_id: str | None = None
         self.clock_offset_s = 0
         self.started_at: float | None = None
-        self.stats = {"accepted": 0, "duplicated": 0, "rejected": 0}
+        self.stats = {"accepted": 0, "duplicated": 0, "rejected": 0, "memos": 0}
         self.error: str | None = None
         self.done = False
 
@@ -106,6 +116,10 @@ class SyncSession:
             return [self._hello(msg, now)]
         if kind == "batch":
             return [self._batch(msg, now)]
+        if kind == "memo":
+            return [self._memo(msg, now)]
+        if kind == "memo_part":
+            return [self._memo_part(msg, now)]
         if kind == "bye":
             self._finish(now)
             return []
@@ -149,6 +163,64 @@ class SyncSession:
         self.stats["rejected"] += len(rej)
         log.info("batch %s: %d accepted, %d duplicate, %d rejected", batch_id, len(acc), len(dup), len(rej))
         return {"m": "batch_ack", "b": batch_id, "acc": acc, "dup": dup, "rej": rej}
+
+    def _memo(self, msg: dict, now: float) -> dict:
+        """Open or resume a memo transfer. `have` tells the watch where to start."""
+        memo_id = msg.get("id")
+        nack = {"m": "memo_ack", "id": memo_id, "ok": False, "have": 0}
+        if self.device_id is None:
+            return {**nack, "err": "no hello"}
+        if self.assembler is None:
+            return {**nack, "err": "memos disabled"}
+        if not MemoAssembler.valid_id(memo_id):
+            return {**nack, "err": "bad id"}
+        # Already stored: tell the watch it is done so it drops its copy.
+        if self.store.memo_exists(memo_id):
+            return {"m": "memo_ack", "id": memo_id, "ok": True, "done": True, "have": 0}
+
+        total_parts, total_bytes = msg.get("parts"), msg.get("bytes")
+        if not isinstance(total_parts, int) or not 0 < total_parts <= MAX_PARTS:
+            return {**nack, "err": "bad parts"}
+        if not isinstance(total_bytes, int) or not 0 < total_bytes <= MAX_MEMO_BYTES:
+            return {**nack, "err": "bad bytes"}
+
+        self.memo_meta[memo_id] = {
+            "ts": int(msg.get("ts") or now) + self.clock_offset_s,
+            "secs": int(msg.get("secs") or 0),
+        }
+        have = self.assembler.begin(memo_id, total_parts, total_bytes)
+        log.info("memo %s: %d parts, %d bytes, resuming at %d", memo_id, total_parts, total_bytes, have)
+        return {"m": "memo_ack", "id": memo_id, "ok": True, "have": have}
+
+    def _memo_part(self, msg: dict, now: float) -> dict:
+        memo_id, n = msg.get("id"), msg.get("n")
+        if self.device_id is None or self.assembler is None:
+            return {"m": "part_ack", "id": memo_id, "n": n, "ok": False, "have": 0}
+        if not MemoAssembler.valid_id(memo_id) or not isinstance(n, int):
+            return {"m": "part_ack", "id": memo_id, "n": n, "ok": False, "have": 0}
+
+        ok, have = self.assembler.add_part(memo_id, n, msg.get("d") or "")
+        reply = {"m": "part_ack", "id": memo_id, "n": n, "ok": ok, "have": have}
+        if not ok or not self.assembler.is_complete(memo_id):
+            return reply
+
+        meta = self.memo_meta.get(memo_id, {})
+        ts = int(meta.get("ts") or now)
+        path = self.assembler.finalize(memo_id, ts)
+        if path is None:
+            return {**reply, "done": False, "err": "assembly failed"}
+        self.store.insert_memo(
+            memo_id,
+            device_id=self.device_id,
+            ts=ts,
+            secs=int(meta.get("secs") or 0),
+            byte_len=path.stat().st_size,
+            path=str(path),
+            now=int(now),
+        )
+        self.stats["memos"] += 1
+        log.info("memo %s stored: %s (%d bytes)", memo_id, path.name, path.stat().st_size)
+        return {**reply, "done": True}
 
     def _finish(self, now: float) -> None:
         if self.done:

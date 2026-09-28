@@ -1,8 +1,8 @@
 {
   "configVersion": "v2",
   "app": {
-    "appId": 20260921,
-    "appName": "WeightLog",
+    "appId": 20260928,
+    "appName": "VoiceMemo",
     "appType": "app",
     "version": {
       "code": 1,
@@ -10,10 +10,13 @@
     },
     "icon": "icon.png",
     "vender": "diego",
-    "description": "Body weight logger, syncs over BLE to weightlog"
+    "description": "Voice memos, synced over BLE to the weightlog daemon"
   },
   "permissions": [
-    "device:os.local_storage"
+    "device:os.local_storage",
+    "device:os.mic",
+    "data:os.mic.record",
+    "data:os.device.info"
   ],
   "runtime": {
     "apiVersion": {
@@ -26,7 +29,7 @@
   "defaultLanguage": "en-US",
   "i18n": {
     "en-US": {
-      "appName": "WeightLog"
+      "appName": "VoiceMemo"
     }
   },
   "targets": {
@@ -34,25 +37,14 @@
       "module": {
         "page": {
           "pages": [
-            "page/home",
-            "page/sync",
-            "page/history"
+            "page/index"
           ]
         }
       },
       "platforms": [
-        {
-          "name": "gtr4",
-          "deviceSource": 7930113
-        },
-        {
-          "name": "gtr4",
-          "deviceSource": 7864577
-        },
-        {
-          "name": "gtr4-cn",
-          "deviceSource": 7930112
-        }
+        { "name": "gtr4", "deviceSource": 7930113 },
+        { "name": "gtr4", "deviceSource": 7864577 },
+        { "name": "gtr4-cn", "deviceSource": 7930112 }
       ],
       "designWidth": 480,
       "screenShape": "round"
